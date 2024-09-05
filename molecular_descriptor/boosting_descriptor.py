@@ -6,7 +6,6 @@ from sklearn.model_selection import train_test_split, cross_val_score, Stratifie
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
 from imblearn.under_sampling import RandomUnderSampler
 import joblib
 import logging
@@ -14,52 +13,41 @@ import logging
 # Configure logging to display information during code execution
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Load the ChiPi datasets for conglomerates and non-conglomerates
-congloms_df = pd.read_csv('processed_congloms_chipi.csv', low_memory=False)
-non_congloms_df = pd.read_csv('processed_non-congloms_chipi.csv', low_memory=False)
+# Load the datasets containing descriptors for conglomerates and non-conglomerates
+congloms_descriptors_df = pd.read_csv('congloms_descriptors_cut4.csv')
+non_congloms_descriptors_df = pd.read_csv('non_congloms_descriptors_cut4.csv')
 
 # Add a label column to differentiate between conglomerates (1) and non-conglomerates (0)
-congloms_df['label'] = 1
-non_congloms_df['label'] = 0
+congloms_descriptors_df['label'] = 1
+non_congloms_descriptors_df['label'] = 0
 
 # Combine both datasets into a single DataFrame for processing
-combined_df = pd.concat([congloms_df, non_congloms_df], ignore_index=True)
-
-# Define the continuous features and categorical features used as predictors, as well as the label
-continuous_features = ['a', 'b', 'c', 'Cell Volume', 'Calc. Density', 'Alpha', 'Beta', 'Gamma',
-                       'R-factor', 'Number of chiral center', 'S', 'R', 'M',
-                       'Number of Carbon Chiral Atom', 'Number of Chiral Center having H',
-                       'Number of chiral resd', 'Number of chiral families',
-                       'Unique Chemical Units', 'Z Prime', 'Z Value']
-categorical_feature = ['Space Gp. Number']
-X = combined_df[continuous_features + categorical_feature].copy()
+combined_df = pd.concat([congloms_descriptors_df, non_congloms_descriptors_df], ignore_index=True)
+# Separate the features (X) from the label (y)
+X = combined_df.drop('label', axis=1)
 y = combined_df['label']
 
-# Convert continuous features to numeric data types, handling any errors by converting them to NaN
-for column in continuous_features:
-    X[column] = pd.to_numeric(X[column], errors='coerce')
+# Handle any infinite values and NaN values by replacing them with the mean of the column
+X.replace([np.inf, -np.inf], np.nan, inplace=True)
+imputer = SimpleImputer(strategy='mean')
+X = pd.DataFrame(imputer.fit_transform(X), columns=X.columns)
 
-# Handle missing values and scale the data
-preprocessor = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='mean')),
-    ('scaler', StandardScaler())
-])
+# Standardize the data to have a mean of 0 and a standard deviation of 1
+scaler = StandardScaler()
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
-# Apply the preprocessing steps to the predictor variables
-X_preprocessed = preprocessor.fit_transform(X)
-
-# Apply random undersampling to balance the dataset between conglomerates and non-conglomerates
-rus = RandomUnderSampler(random_state=42)
-X_res, y_res = rus.fit_resample(X_preprocessed, y)
+# Apply random undersampling to balance the dataset
+undersampler = RandomUnderSampler(random_state=42)
+X_res, y_res = undersampler.fit_resample(X, y)
 
 # Set the number of trees and initialize variables for tracking the best parameters
-num_trees = 245
+num_trees = 250
 best_depth = 0
 best_shrinkage = 0.0
 best_accuracy = 0.0
 accuracy_results = []
 
-# Step 1: Optimize interaction depth
+# Step 1: Optimize interaction depth (max_depth)
 for depth in range(1, 21):
     boosting_model = GradientBoostingClassifier(n_estimators=num_trees, max_depth=depth, random_state=42)
 
@@ -142,14 +130,14 @@ print(classification_report(y_test, y_pred))
 print(confusion_matrix(y_test, y_pred))
 
 # Save the trained model
-model_output_path = 'boosting_best_model.pkl'
+model_output_path = 'all_ML_boosting_best_model.pkl'
 joblib.dump(final_boosting_model, model_output_path)
 logging.info(f"Model saved to {model_output_path}")
 
 # Calculate and display the feature importances for the model
 feature_importances = final_boosting_model.feature_importances_
 importance_df = pd.DataFrame({
-    'Feature': continuous_features + categorical_feature,
+    'Feature': X.columns,
     'Importance': feature_importances
 }).sort_values(by='Importance', ascending=False)
 
