@@ -12,6 +12,8 @@ Crystal Descriptors from ChiPi (Clever & Coquerel, 2020):
 - Another way to represent the data gained from the CSD numerically based on crystal-related features.
 
 ## Related Research Publications:
+Clevers, S., & Coquerel, G. (2020). Kryptoracemic compound hunting and frequency in the Cambridge Structural Database. CrystEngComm, 22(43), 7407-7419.
+
 Walsh, M. P., Barclay, J. A., Begg, C. S., Xuan, J., Johnson, N. T., Cole, J. C., & Kitching, M. O. (2022). Identifying a hidden conglomerate chiral pool in the CSD. JACS Au, 2(10), 2235-2250.
 
 Walsh, M. P., Barclay, J. A., Begg, C. S., Xuan, J., & Kitching, M. O. (2023). Conglomerate crystallization in the cambridge structural database (2020–2021). Crystal Growth & Design, 23(4), 2837-2844.
